@@ -1,0 +1,80 @@
+from selenium import webdriver
+# from credentials import KIBANA_PWD, KIBANA_USERNAME
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions
+import unittest
+import time
+
+
+
+class CheckKibana:
+    def __init__(self):
+        self.driver = webdriver.Chrome()
+        self.driver.get('https://logs.edcew.ecbsn.com/login?')
+        self.PROD_ENV = ['env', 'is', 'prod-edc-ew']
+
+    def test_waiting(self, xpath):
+        WebDriverWait(self.driver, 20).until(
+            expected_conditions.presence_of_element_located(
+                (By.XPATH, xpath)
+            )
+        )
+
+    @staticmethod
+    def set_up_filter(drive, end, value_input):
+        root = '/html/body/div[2]/div/div/div/div[3]/discover-app/'
+        main_filter = 'main/div[1]/filter-bar/section/div[2]/div[5]/filter-editor/div/div[2]/div[1]/div[2]/'
+        filter_input_1 = drive.find_element_by_xpath(root + main_filter + end)
+        filter_input_1.send_keys(value_input)
+        filter_input_1.send_keys(Keys.ENTER)
+
+    @staticmethod
+    def save_filter(drive, button):
+        root = '/html/body/div[2]/div/div/div/div[3]/discover-app/'
+        drive.find_element_by_xpath(root + button).click()
+
+    def make_filter(self, drive, values):
+        self.set_up_filter(drive, 'div[1]/filter-field-select/div/input[1]', values[0])
+        self.set_up_filter(drive, 'div[2]/filter-operator-select/div/input[1]', values[1])
+        self.set_up_filter(
+            drive,
+            'div[3]/filter-params-editor/ng-switch/filter-params-phrase-editor/div/input[1]',
+            values[2],
+        )
+        self.save_filter(
+            drive,
+            'main/div[1]/filter-bar/section/div[2]/div[5]/filter-editor/div/div[3]/div[2]/button[2]',
+        )
+
+    @staticmethod
+    def click_on_buttons(drive, button_name):
+        drive.find_element_by_link_text(button_name).click()
+
+    def test_login_kibana(self):
+        self.test_waiting('/html/body/div[2]/div/div/div/div[3]/div/form/div[1]/input')
+        driver = self.driver
+        input_login = driver.find_element_by_xpath('/html/body/div[2]/div/div/div/div[3]/div/form/div[1]/input')
+        input_password = driver.find_element_by_xpath('/html/body/div[2]/div/div/div/div[3]/div/form/div[2]/input')
+        input_login.send_keys(KIBANA_USERNAME)
+        input_password.send_keys(KIBANA_PWD)
+        driver.find_element_by_xpath('/html/body/div[2]/div/div/div/div[3]/div/form/button').click()
+
+    def set_some_filter(self):
+        root = '/html/body/div[2]/div/div/div/div[3]/discover-app/'
+        driver = self.driver
+        self.test_login_kibana()
+        self.test_waiting('/html/body/div[2]/div/div/div/div[3]/home-app/div/div/div[1]/div[1]/div/h3')
+        self.click_on_buttons(driver, 'Discover')
+        self.test_waiting(root + 'kbn-top-nav/div/div[1]/div[2]/div/div/button[4]')
+        driver.find_element_by_xpath(root + 'kbn-top-nav/div/div[1]/div[2]/div/div/button[4]').click()
+        self.click_on_buttons(driver, 'Last 24 hours')
+        driver.find_element_by_xpath(
+            root + 'main/div[1]/filter-bar/section/div[2]/div[2]/div/button'
+        ).click()
+        self.make_filter(driver, self.PROD_ENV)
+
+
+kibana = CheckKibana()
+kibana.set_some_filter()
